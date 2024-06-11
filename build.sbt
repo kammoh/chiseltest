@@ -2,17 +2,17 @@
 
 lazy val commonSettings = Seq(
   organization := "edu.berkeley.cs",
-  scalaVersion := "2.13.12",
-  crossScalaVersions := Seq("2.13.12")
+  scalaVersion := "2.13.14",
+  crossScalaVersions := Seq("2.13.14")
 )
 
-val chiselVersion = "6.0.0"
-val firrtlVersion = "6.0-SNAPSHOT"
+val chiselVersion = "6.3.0"
+val firrtlVersion = "6.0.0"
 
 lazy val chiseltestSettings = Seq(
   name := "chiseltest",
   // we keep in sync with chisel version names
-  version := "6.0-SNAPSHOT",
+  version := "6.3.0",
   scalacOptions := Seq(
     "-deprecation",
     "-feature",
@@ -24,12 +24,12 @@ lazy val chiseltestSettings = Seq(
     "-Wconf:cat=deprecation&msg=will not be supported as part of the migration to the MLIR-based FIRRTL Compiler:s"
   ),
   // Always target Java8 for maximum compatibility
-  javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
+  // javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
   libraryDependencies ++= Seq(
     "org.chipsalliance" %% "chisel" % chiselVersion,
     "edu.berkeley.cs" %% "firrtl2" % firrtlVersion,
-    "org.scalatest" %% "scalatest" % "3.2.17",
-    "net.java.dev.jna" % "jna" % "5.14.0",
+    "org.scalatest" %% "scalatest" % "3.2.17+",
+    "net.java.dev.jna" % "jna" % "5.14.0+",
     compilerPlugin(("org.chipsalliance" % "chisel-plugin" % chiselVersion).cross(CrossVersion.full))
   ),
   resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
