@@ -6,13 +6,13 @@ lazy val commonSettings = Seq(
   crossScalaVersions := Seq("2.13.14")
 )
 
-val chiselVersion = "6.3.0"
+val chiselVersion = "7.0.0-M1+129-4fd7dd8a-SNAPSHOT"
 val firrtlVersion = "6.0.0"
 
 lazy val chiseltestSettings = Seq(
   name := "chiseltest",
   // we keep in sync with chisel version names
-  version := "6.3.0",
+  version := "7.0.0-M1+129-4fd7dd8a-SNAPSHOT",
   scalacOptions := Seq(
     "-deprecation",
     "-feature",

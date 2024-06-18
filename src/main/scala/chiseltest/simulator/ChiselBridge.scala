@@ -174,7 +174,7 @@ private object ChiselBridge {
     case IntModule(info, name, ports, intrinsic, params) =>
       // TODO: add proper intrinsic module support
       firrtl2.ir.ExtModule(convert(info), name, ports.map(convert), intrinsic, params.map(convert))
-    case Module(info, name, ports, body) =>
+    case Module(info, name, public, layers, ports, body) =>
       firrtl2.ir.Module(convert(info), name, ports.map(convert), convert(body))
 
   }
@@ -273,7 +273,10 @@ private object ChiselBridge {
       firrtl2.CDefMemory(convert(info), name, convert(tpe), size, seq, convertReadUnderWrite(readUnderWrite))
     case CDefMPort(info, name, tpe, mem, exps, direction) =>
       firrtl2.CDefMPort(convert(info), name, convert(tpe), mem, exps.map(convert), convert(direction))
-    case other => throw new NotImplementedError(s"TODO: convert ${other}")
+    case IntrinsicStmt(info, intrinsic, args, params, tpe) => firrtl2.ir.EmptyStmt
+    case other =>
+      throw new NotImplementedError(s"TODO: convert ${other}")
+    // firrtl2.ir.EmptyStmt
   }
   private def convert(op: PrimOp): firrtl2.ir.PrimOp = op match {
     case PrimOps.Add          => firrtl2.PrimOps.Add
