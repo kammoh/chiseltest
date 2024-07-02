@@ -7,12 +7,12 @@ lazy val commonSettings = Seq(
 )
 
 val chiselVersion = "7.0.0-M1+129-4fd7dd8a-SNAPSHOT"
-val firrtlVersion = "6.0.0"
+val firrtlVersion = "6.0-SNAPSHOT"
 
 lazy val chiseltestSettings = Seq(
   name := "chiseltest",
   // we keep in sync with chisel version names
-  version := "7.0.0-M1+129-4fd7dd8a-SNAPSHOT",
+  version := chiselVersion,
   scalacOptions := Seq(
     "-deprecation",
     "-feature",
@@ -28,8 +28,8 @@ lazy val chiseltestSettings = Seq(
   libraryDependencies ++= Seq(
     "org.chipsalliance" %% "chisel" % chiselVersion,
     "edu.berkeley.cs" %% "firrtl2" % firrtlVersion,
-    "org.scalatest" %% "scalatest" % "3.2.17+",
-    "net.java.dev.jna" % "jna" % "5.14.0+",
+    "org.scalatest" %% "scalatest" % "3.2.19",
+    "net.java.dev.jna" % "jna" % "5.14.0",
     compilerPlugin(("org.chipsalliance" % "chisel-plugin" % chiselVersion).cross(CrossVersion.full))
   ),
   resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
