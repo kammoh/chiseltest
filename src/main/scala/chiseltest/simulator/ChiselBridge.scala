@@ -273,7 +273,17 @@ private object ChiselBridge {
       firrtl2.CDefMemory(convert(info), name, convert(tpe), size, seq, convertReadUnderWrite(readUnderWrite))
     case CDefMPort(info, name, tpe, mem, exps, direction) =>
       firrtl2.CDefMPort(convert(info), name, convert(tpe), mem, exps.map(convert), convert(direction))
-    case IntrinsicStmt(info, intrinsic, args, params, tpe) => firrtl2.ir.EmptyStmt
+    case IntrinsicStmt(info, "circt_chisel_ifelsefatal", args, params, tpe) =>
+      firrtl2.ir.Verification(
+        firrtl2.ir.Formal.Assert,
+        convert(info),
+        convert(args(0)),
+        convert(args(1)),
+        convert(args(2)),
+        firrtl2.ir.StringLit(s"ifelsefatal ${params.mkString(", ")}")
+      )
+    case IntrinsicStmt(info, intrinsic, args, params, tpe) =>
+      throw new NotImplementedError(s"TODO: convert IntrinsicStmt ${intrinsic}")
     case other =>
       throw new NotImplementedError(s"TODO: convert ${other}")
     // firrtl2.ir.EmptyStmt
