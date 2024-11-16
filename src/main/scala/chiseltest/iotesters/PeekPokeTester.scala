@@ -114,7 +114,7 @@ abstract class PeekPokeTester[T <: Module](val dut: T) extends LazyLogging {
   // helps us work around the fact that signal.width is private!
   private def getFirrtlWidth(signal: Bits): chisel3.Width = signal.widthOption match {
     case Some(value) => chisel3.KnownWidth(value)
-    case None        => chisel3.UnknownWidth()
+    case None        => chisel3.UnknownWidth
   }
 
   /** Locate a specific bundle element, given a name path. TODO: Handle Vecs

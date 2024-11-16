@@ -4,12 +4,22 @@ import mill._
 import mill.scalalib._
 import mill.scalalib.scalafmt._
 import mill.scalalib.publish._
+import mill.util.Util
+
 import coursier.maven.MavenRepository
 
-object chiseltest extends mill.Cross[chiseltestCrossModule]("2.13.13")
+import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
+import mill.contrib.buildinfo.BuildInfo
 
-object firrtl2 extends someModule with SbtModule with PublishModule with ScalafmtModule {
-  def scalaVersion = "2.13.13"
+import java.io.IOException
+import scala.util.matching.Regex
+
+object chiseltest extends mill.Cross[chiseltestCrossModule]("2.13.14")
+
+object firrtl2 extends someModule with SbtModule with PublishModule with ScalafmtModule with BuildInfo {
+  def scalaVersion = "2.13.14"
+
+  override def artifactName = "firrtl2"
 
   override def ivyDeps = T {
     Agg(
@@ -19,8 +29,125 @@ object firrtl2 extends someModule with SbtModule with PublishModule with Scalafm
       ivyDep("os-lib"),
       ivyDep("json4s-native"),
       ivyDep("commons-text"),
-      ivyDep("scala-parallel-collections")
+      ivyDep("scala-parallel-collections"),
+      ivy"org.antlr:antlr4-runtime:$antlr4Version"
     )
+  }
+
+  def generatedAntlr4Source = T.sources {
+    antlr4Path().path match {
+      case f if f.last == "antlr4.jar" =>
+        os.proc(
+          "java",
+          "-jar",
+          f.toString,
+          "-o",
+          T.ctx().dest.toString,
+          "-lib",
+          antlrSource().path.toString,
+          "-package",
+          "firrtl2.antlr",
+          "-listener",
+          "-visitor",
+          antlrSource().path.toString
+        ).call()
+      case _ =>
+        os.proc(
+          antlr4Path().path.toString,
+          "-o",
+          T.ctx().dest.toString,
+          "-lib",
+          antlrSource().path.toString,
+          "-package",
+          "firrtl2.antlr",
+          "-listener",
+          "-visitor",
+          antlrSource().path.toString
+        ).call()
+    }
+
+    T.ctx().dest
+  }
+
+  def architecture = T {
+    System.getProperty("os.arch")
+  }
+  def operationSystem = T {
+    System.getProperty("os.name")
+  }
+
+  override def buildInfoPackageName = "firrtl2"
+
+  override def buildInfoMembers = Seq(
+    BuildInfo.Value("name", artifactName()),
+    BuildInfo.Value("version", publishVersion()),
+    BuildInfo.Value("scalaVersion", scalaVersion())
+  )
+  override def generatedSources = T {
+    super.generatedSources() ++ generatedAntlr4Source()
+  }
+
+// compare version, 1 for (a > b), 0 for (a == b), -1 for (a < b)
+  def versionCompare(a: String, b: String) = {
+    def nums(s: String) = s.split("\\.").map(_.toInt)
+    val pairs = nums(a).zipAll(nums(b), 0, 0).toList
+    def go(ps: List[(Int, Int)]): Int = ps match {
+      case Nil => 0
+      case (a, b) :: t =>
+        if (a > b) 1 else if (a < b) -1 else go(t)
+    }
+    go(pairs)
+  }
+
+  /* antlr4 */
+  def antlr4Version = "4.9.3"
+
+  def antlrSource = T.source {
+    millSourcePath / "src" / "main" / "antlr4" / "FIRRTL.g4"
+  }
+
+  val checkSystemAntlr4Version: Boolean = true
+
+  def antlr4Path = T.persistent {
+    // Linux distro package antlr4 as antlr4, while brew package as antlr
+    PathRef(Seq("antlr4", "antlr").flatMap { f =>
+      try {
+        // pattern to extract version from antlr4/antlr version output
+        val versionPattern: Regex = """(?s).*(\d+\.\d+\.\d+).*""".r
+        // get version from antlr4/antlr version output
+        val systemAntlr4Version = os.proc(f).call(check = false).out.text().trim match {
+          case versionPattern(v) => v
+          case _                 => "0.0.0"
+        }
+        val systemAntlr4Path = os.Path(os.proc("bash", "-c", s"command -v $f").call().out.text().trim)
+        if (checkSystemAntlr4Version)
+          // Perform strict version checking
+          // check if system antlr4 version is the same as the one we want
+          if (versionCompare(systemAntlr4Version, antlr4Version) == 0)
+            Some(systemAntlr4Path)
+          else
+            None
+        else
+        // Perform a cursory version check, avoid using antlr2
+        // check if system antlr4 version is greater than 4.0.0
+        if (versionCompare(systemAntlr4Version, "4.0.0") >= 0)
+          Some(systemAntlr4Path)
+        else
+          None
+      } catch {
+        case _: IOException =>
+          None
+      }
+    }.headOption match {
+      case Some(bin) =>
+        println(s"Use system antlr4: $bin")
+        bin
+      case None =>
+        println("Download antlr4 from Internet")
+        if (!os.isFile(T.ctx().dest / "antlr4.jar"))
+          Util.download(s"https://www.antlr.org/download/antlr-$antlr4Version-complete.jar", os.rel / "antlr4.jar")
+        T.ctx().dest / "antlr4.jar"
+    })
   }
 
   def publishVersion = getOrgAndVersion("chisel")._2
@@ -40,9 +167,9 @@ object firrtl2 extends someModule with SbtModule with PublishModule with Scalafm
 }
 
 val defaultVersions = Map(
-  "chisel" -> ("org.chipsalliance", "7.0.0-M1+68-96407e96+20240416-1208-SNAPSHOT"),
+  "chisel" -> ("org.chipsalliance", "7.0.0-M2+182-9c2498ad-SNAPSHOT"),
   "chisel-plugin" -> ("org.chipsalliance:::", "$chisel"),
-  "firrtl2" -> ("edu.berkeley.cs", "6.0-SNAPSHOT"),
+  // "firrtl2" -> ("edu.berkeley.cs", "7.0-SNAPSHOT"),
   "scalatest" -> ("org.scalatest", "3.2.17"),
   "sscalacheck" -> ("org.scalatestplus::scalacheck-1-17", "3.2.17.0"),
   "scopt" -> ("com.github.scopt", "4.1.0"),
@@ -104,7 +231,7 @@ trait chiseltestCrossModule
 
   override def ivyDeps = Agg(
     ivyDep("chisel"),
-    ivyDep("firrtl2"),
+    // ivyDep("firrtl2"),
     ivyDep("jna"),
     ivyDep("scalatest")
   )
@@ -130,7 +257,7 @@ trait chiseltestCrossModule
     )
   }
 
-  override def moduleDeps = super.moduleDeps
+  override def moduleDeps = super.moduleDeps ++ Seq(firrtl2)
 
   // make mill publish sbt compatible package
   override def artifactName = "chiseltest"

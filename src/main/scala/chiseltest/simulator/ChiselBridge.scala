@@ -49,7 +49,7 @@ private[chiseltest] object convertTargetToFirrtl2 {
 /// wraps Chisel elaboration to bridge it over into the firrtl2 world
 private object ChiselBridge {
   private val elaboratePhase = new Elaborate
-  private val maybeAspects = new MaybeAspectPhase
+  // private val maybeAspects = new MaybeAspectPhase
   private val converter = new Convert
 
   def elaborate[M <: RawModule](
@@ -65,7 +65,7 @@ private object ChiselBridge {
     val dut: M = elaborationAnnos.collectFirst { case DesignAnnotation(d) => d }.get.asInstanceOf[M]
 
     // run aspects
-    val aspectAnnos: firrtl.AnnotationSeq = maybeAspects.transform(elaborationAnnos)
+    val aspectAnnos: firrtl.AnnotationSeq = elaborationAnnos
 
     // run Converter.convert(a.circuit) and toFirrtl on all annotations
     val converterAnnos: firrtl.AnnotationSeq = converter.transform(aspectAnnos)
@@ -280,7 +280,7 @@ private object ChiselBridge {
         convert(args(0)),
         convert(args(1)),
         convert(args(2)),
-        firrtl2.ir.StringLit(s"ifelsefatal ${params.mkString(", ")}")
+        firrtl2.ir.StringLit("")
       )
     case IntrinsicStmt(info, intrinsic, args, params, tpe) =>
       throw new NotImplementedError(s"TODO: convert IntrinsicStmt ${intrinsic}")
