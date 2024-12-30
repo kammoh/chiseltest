@@ -62,7 +62,7 @@ private object ChiselBridge {
     val elaborationAnnos: firrtl.AnnotationSeq = elaboratePhase.transform(genAnno +: chiselAnnos)
 
     // extract elaborated module
-    val dut: M = elaborationAnnos.collectFirst { case DesignAnnotation(d) => d }.get.asInstanceOf[M]
+    val dut: M = elaborationAnnos.collectFirst { case DesignAnnotation(d, layers) => d }.get.asInstanceOf[M]
 
     // run aspects
     val aspectAnnos: firrtl.AnnotationSeq = elaborationAnnos
@@ -153,6 +153,7 @@ private object ChiselBridge {
       Some(firrtl2.annotations.EnumVecAnnotation(convertNamed(target), typeName, fields))
     // ignoreDecodeTableAnnotation since it is not needed by the firrtl compiler
     case _: DecodeTableAnnotation => None
+    case _: AttributeAnnotation => None
     //
     case _ =>
       println(
@@ -282,6 +283,7 @@ private object ChiselBridge {
         convert(args(2)),
         firrtl2.ir.StringLit("")
       )
+    case LayerBlock(info, layer: String, body: Statement) => convert(body)
     case IntrinsicStmt(info, intrinsic, args, params, tpe) =>
       throw new NotImplementedError(s"TODO: convert IntrinsicStmt ${intrinsic}")
     case other =>

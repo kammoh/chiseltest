@@ -207,7 +207,7 @@ private class SMTLibSolverContext(cmd: List[String], val solver: Solver, debug: 
     } catch { case _: java.io.IOException => /* ignore any IO exceptions */ }
     if (proc.isAlive()) {
       Thread.sleep(5)
-      proc.destroyForcibly()
+      proc.destroy(shutdownGracePeriod = 0)
     }
   }
   override protected def doSetLogic(logic: String): Unit = getLogic match {

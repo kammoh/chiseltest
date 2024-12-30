@@ -3,27 +3,27 @@
 import mill._
 import mill.scalalib._
 import mill.scalalib.scalafmt._
-import mill.scalalib.publish._
 import mill.util.Util
-
 import coursier.maven.MavenRepository
+
+import $ivy.`com.lihaoyi::mill-contrib-bloop:$MILL_VERSION`
+import mill.contrib.bloop.Bloop
 
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
 
+import $ivy.`io.chris-kipp::mill-ci-release::0.2.0`
+import io.kipp.mill.ci.release.CiReleaseModule
+
 import java.io.IOException
 import scala.util.matching.Regex
 
-object chiseltest extends mill.Cross[chiseltestCrossModule]("2.13.14")
-
-object firrtl2 extends someModule with SbtModule with PublishModule with ScalafmtModule with BuildInfo {
-  def scalaVersion = "2.13.14"
-
+object firrtl2 extends AnyScalaModule with SbtModule with BuildInfo with CiReleaseModule {
   override def artifactName = "firrtl2"
 
   override def ivyDeps = T {
     Agg(
-      ivyDep("scalatest"),
+      // ivyDep("scalatest"),
       // ivyDep("scalacheck"),
       ivyDep("scopt"),
       ivyDep("os-lib"),
@@ -80,7 +80,7 @@ object firrtl2 extends someModule with SbtModule with PublishModule with Scalafm
 
   override def buildInfoMembers = Seq(
     BuildInfo.Value("name", artifactName()),
-    BuildInfo.Value("version", publishVersion()),
+    BuildInfo.Value("version", chiseltestVersion),
     BuildInfo.Value("scalaVersion", scalaVersion())
   )
   override def generatedSources = T {
@@ -100,7 +100,7 @@ object firrtl2 extends someModule with SbtModule with PublishModule with Scalafm
   }
 
   /* antlr4 */
-  def antlr4Version = "4.9.3"
+  def antlr4Version = "4.13.2"
 
   def antlrSource = T.source {
     millSourcePath / "src" / "main" / "antlr4" / "FIRRTL.g4"
@@ -150,7 +150,7 @@ object firrtl2 extends someModule with SbtModule with PublishModule with Scalafm
     })
   }
 
-  def publishVersion = getOrgAndVersion("chisel")._2
+  object test extends AnyScalaModule with SbtTests with TestModule.ScalaTest {}
 
   def pomSettings = T {
     PomSettings(
@@ -167,17 +167,16 @@ object firrtl2 extends someModule with SbtModule with PublishModule with Scalafm
 }
 
 val defaultVersions = Map(
-  "chisel" -> ("org.chipsalliance", "7.0.0-M2+182-9c2498ad-SNAPSHOT"),
+  "chisel" -> ("org.chipsalliance", "7.0.0-M2+243-4aaefff4-SNAPSHOT"),
   "chisel-plugin" -> ("org.chipsalliance:::", "$chisel"),
-  // "firrtl2" -> ("edu.berkeley.cs", "7.0-SNAPSHOT"),
-  "scalatest" -> ("org.scalatest", "3.2.17"),
+  "scalatest" -> ("org.scalatest", "3.2.19"),
   "sscalacheck" -> ("org.scalatestplus::scalacheck-1-17", "3.2.17.0"),
   "scopt" -> ("com.github.scopt", "4.1.0"),
-  "os-lib" -> ("com.lihaoyi", "0.9.2"),
-  "json4s-native" -> ("org.json4s", "4.1.0-M4+"),
-  "commons-text" -> ("org.apache.commons:", "1.10.0"),
-  "scala-parallel-collections" -> ("org.scala-lang.modules", "1.0.4"),
-  "jna" -> ("net.java.dev.jna:", "5.14.0")
+  "os-lib" -> ("com.lihaoyi", "0.11.3"),
+  "json4s-native" -> ("org.json4s", "4.1.0-M8+"),
+  "commons-text" -> ("org.apache.commons:", "1.13.0"),
+  "scala-parallel-collections" -> ("org.scala-lang.modules", "1.1.0"),
+  "jna" -> ("net.java.dev.jna:", "5.16.0")
 )
 
 @annotation.tailrec
@@ -196,21 +195,9 @@ def ivyDep(dep: String) = {
   ivy"$org${if (!org.contains(":")) "::" + dep else if (org.endsWith(":")) dep else ""}:$version"
 }
 
-trait chiseltestCrossModule
-    extends Cross.Module[String]
-    with someModule
-    with SbtModule
-    with PublishModule
-    with ScalafmtModule {
-
-  val crossScalaVersion = crossValue
-
-  def scalaVersion = crossScalaVersion
+object chiseltest extends AnyScalaModule with SbtModule with CiReleaseModule {
 
   override def millSourcePath = super.millSourcePath / os.up
-
-  // 2.12.12 -> Array("2", "12", "12") -> "12" -> 12
-  private def majorVersion = crossScalaVersion.split('.')(1).toInt
 
   override def scalacOptions = T {
     super.scalacOptions() ++ Seq(
@@ -226,44 +213,46 @@ trait chiseltestCrossModule
   }
 
   override def javacOptions = T {
-    super.javacOptions() // ++ Seq("-source", "1.8", "-target", "1.8")
+    super.javacOptions()
   }
 
   override def ivyDeps = Agg(
     ivyDep("chisel"),
-    // ivyDep("firrtl2"),
     ivyDep("jna"),
     ivyDep("scalatest")
   )
 
   override def scalacPluginIvyDeps = Agg(ivyDep("chisel-plugin"))
 
-  object test extends ScalaTests with TestModule.ScalaTest with ScalafmtModule {
+  object test extends AnyScalaModule with SbtTests with TestModule.ScalaTest {
+
+    override def scalacPluginIvyDeps = Agg(ivyDep("chisel-plugin"))
+
     override def ivyDeps = Agg(ivyDep("chisel"))
   }
-
-  def publishVersion = getOrgAndVersion("chisel")._2
 
   def pomSettings = T {
     PomSettings(
       description = artifactName(),
-      organization = "edu.berkeley.cs",
-      url = "https://github.com/ucb-bar/chiseltest",
+      organization = "xyz.kammoh",
+      url = "https://github.com/kammoh/chiseltest",
       licenses = Seq(License.`BSD-3-Clause`),
-      versionControl = VersionControl.github("ucb-bar", "chiseltest"),
+      versionControl = VersionControl.github("kammoh", "chiseltest"),
       developers = Seq(
         Developer("ducky64", "Richard Lin", "https://aspire.eecs.berkeley.edu/author/rlin/")
       )
     )
   }
 
-  override def moduleDeps = super.moduleDeps ++ Seq(firrtl2)
+  override def moduleDeps = Seq(firrtl2)
 
   // make mill publish sbt compatible package
   override def artifactName = "chiseltest"
 }
 
-trait someModule extends ScalaModule {
+trait AnyScalaModule extends ScalaModule with ScalafmtModule with Bloop.Module {
+  override def scalaVersion = "2.13.15"
+
   override def repositoriesTask = T.task {
     super.repositoriesTask() ++ Seq(
       MavenRepository("https://oss.sonatype.org/content/repositories/releases"),
