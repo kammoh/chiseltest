@@ -3,6 +3,7 @@
 import mill._
 import mill.scalalib._
 import mill.scalalib.scalafmt._
+import mill.scalalib.publish._
 import mill.util.Util
 import coursier.maven.MavenRepository
 
@@ -80,7 +81,7 @@ object firrtl2 extends AnyScalaModule with SbtModule with BuildInfo with CiRelea
 
   override def buildInfoMembers = Seq(
     BuildInfo.Value("name", artifactName()),
-    BuildInfo.Value("version", chiseltestVersion),
+    BuildInfo.Value("version", publishVersion()),
     BuildInfo.Value("scalaVersion", scalaVersion())
   )
   override def generatedSources = T {
