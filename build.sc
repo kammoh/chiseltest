@@ -24,8 +24,6 @@ object firrtl2 extends AnyScalaModule with SbtModule with BuildInfo with CiRelea
 
   override def ivyDeps = T {
     Agg(
-      // ivyDep("scalatest"),
-      // ivyDep("scalacheck"),
       ivyDep("scopt"),
       ivyDep("os-lib"),
       ivyDep("json4s-native"),
@@ -70,20 +68,6 @@ object firrtl2 extends AnyScalaModule with SbtModule with BuildInfo with CiRelea
     T.ctx().dest
   }
 
-  def architecture = T {
-    System.getProperty("os.arch")
-  }
-  def operationSystem = T {
-    System.getProperty("os.name")
-  }
-
-  override def buildInfoPackageName = "firrtl2"
-
-  override def buildInfoMembers = Seq(
-    BuildInfo.Value("name", artifactName()),
-    BuildInfo.Value("version", publishVersion()),
-    BuildInfo.Value("scalaVersion", scalaVersion())
-  )
   override def generatedSources = T {
     super.generatedSources() ++ generatedAntlr4Source()
   }
@@ -151,15 +135,27 @@ object firrtl2 extends AnyScalaModule with SbtModule with BuildInfo with CiRelea
     })
   }
 
-  object test extends AnyScalaModule with SbtTests with TestModule.ScalaTest {}
+  object test extends AnyScalaModule with SbtTests with TestModule.ScalaTest {
+    override def ivyDeps = Agg(
+      ivyDep("scalatest"),
+      ivyDep("scalacheck")
+    )
+  }
 
+  override def buildInfoPackageName = "firrtl2"
+
+  override def buildInfoMembers = Seq(
+    BuildInfo.Value("name", artifactName()),
+    BuildInfo.Value("version", publishVersion()),
+    BuildInfo.Value("scalaVersion", scalaVersion())
+  )
   def pomSettings = T {
     PomSettings(
       description = artifactName(),
-      organization = "edu.berkeley.cs",
+      organization = "xyz.kammoh",
       url = "https://github.com/ucb-bar/firrtl2",
       licenses = Seq(License.`BSD-3-Clause`),
-      versionControl = VersionControl.github("ucb-bar", "firrtl2"),
+      versionControl = VersionControl.github("xyz.kammoh", "firrtl2"),
       developers = Seq(
         Developer("ducky64", "Richard Lin", "https://aspire.eecs.berkeley.edu/author/rlin/")
       )
@@ -171,7 +167,7 @@ val defaultVersions = Map(
   "chisel" -> ("org.chipsalliance", "7.0.0-M2+243-4aaefff4-SNAPSHOT"),
   "chisel-plugin" -> ("org.chipsalliance:::", "$chisel"),
   "scalatest" -> ("org.scalatest", "3.2.19"),
-  "sscalacheck" -> ("org.scalatestplus::scalacheck-1-17", "3.2.17.0"),
+  "scalacheck" -> ("org.scalatestplus::scalacheck-1-17", "3.2.17.0"),
   "scopt" -> ("com.github.scopt", "4.1.0"),
   "os-lib" -> ("com.lihaoyi", "0.11.3"),
   "json4s-native" -> ("org.json4s", "4.1.0-M8+"),
@@ -196,16 +192,14 @@ def ivyDep(dep: String) = {
   ivy"$org${if (!org.contains(":")) "::" + dep else if (org.endsWith(":")) dep else ""}:$version"
 }
 
-object chiseltest extends AnyScalaModule with SbtModule with CiReleaseModule {
+object chiseltest extends AnyScalaModule with SbtModule with BuildInfo with CiReleaseModule {
 
   override def millSourcePath = super.millSourcePath / os.up
 
   override def scalacOptions = T {
     super.scalacOptions() ++ Seq(
-      "-deprecation",
-      "-feature",
-      "-Xcheckinit",
-      "-language:reflectiveCalls", // required by SemanticDB compiler plugin
+      "-language:reflectiveCalls",
+      "-Ymacro-annotations",
       // do not warn about firrtl imports, once the firrtl repo is removed, we will need to import the code
       "-Wconf:cat=deprecation&msg=Importing from firrtl is deprecated:s",
       // do not warn about firrtl deprecations
@@ -231,6 +225,14 @@ object chiseltest extends AnyScalaModule with SbtModule with CiReleaseModule {
 
     override def ivyDeps = Agg(ivyDep("chisel"))
   }
+
+  override def buildInfoPackageName = "chiseltest"
+
+  override def buildInfoMembers = Seq(
+    BuildInfo.Value("name", artifactName()),
+    BuildInfo.Value("version", publishVersion()),
+    BuildInfo.Value("scalaVersion", scalaVersion())
+  )
 
   def pomSettings = T {
     PomSettings(
@@ -261,6 +263,14 @@ trait AnyScalaModule extends ScalaModule with ScalafmtModule with Bloop.Module {
       MavenRepository("https://s01.oss.sonatype.org/content/repositories/releases"),
       MavenRepository("https://s01.oss.sonatype.org/content/repositories/snapshots"),
       MavenRepository(s"file://${os.home}/.m2/repository")
+    )
+  }
+
+  override def scalacOptions = T {
+    super.scalacOptions() ++ Seq(
+      "-deprecation",
+      "-feature",
+      "-Xcheckinit"
     )
   }
 
