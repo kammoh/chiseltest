@@ -49,7 +49,7 @@ private[chiseltest] object convertTargetToFirrtl2 {
 /// wraps Chisel elaboration to bridge it over into the firrtl2 world
 private object ChiselBridge {
   private val elaboratePhase = new Elaborate
-  private val maybeAspects = new MaybeAspectPhase
+  // private val maybeAspects = new MaybeAspectPhase
   private val converter = new Convert
 
   def elaborate[M <: RawModule](
@@ -62,10 +62,10 @@ private object ChiselBridge {
     val elaborationAnnos: firrtl.AnnotationSeq = elaboratePhase.transform(genAnno +: chiselAnnos)
 
     // extract elaborated module
-    val dut: M = elaborationAnnos.collectFirst { case DesignAnnotation(d) => d }.get.asInstanceOf[M]
+    val dut: M = elaborationAnnos.collectFirst { case DesignAnnotation(d, layers) => d }.get.asInstanceOf[M]
 
     // run aspects
-    val aspectAnnos: firrtl.AnnotationSeq = maybeAspects.transform(elaborationAnnos)
+    val aspectAnnos: firrtl.AnnotationSeq = elaborationAnnos
 
     // run Converter.convert(a.circuit) and toFirrtl on all annotations
     val converterAnnos: firrtl.AnnotationSeq = converter.transform(aspectAnnos)
@@ -153,6 +153,7 @@ private object ChiselBridge {
       Some(firrtl2.annotations.EnumVecAnnotation(convertNamed(target), typeName, fields))
     // ignoreDecodeTableAnnotation since it is not needed by the firrtl compiler
     case _: DecodeTableAnnotation => None
+    case _: AttributeAnnotation => None
     //
     case _ =>
       println(
@@ -174,7 +175,7 @@ private object ChiselBridge {
     case IntModule(info, name, ports, intrinsic, params) =>
       // TODO: add proper intrinsic module support
       firrtl2.ir.ExtModule(convert(info), name, ports.map(convert), intrinsic, params.map(convert))
-    case Module(info, name, ports, body) =>
+    case Module(info, name, public, layers, ports, body) =>
       firrtl2.ir.Module(convert(info), name, ports.map(convert), convert(body))
 
   }
@@ -273,7 +274,21 @@ private object ChiselBridge {
       firrtl2.CDefMemory(convert(info), name, convert(tpe), size, seq, convertReadUnderWrite(readUnderWrite))
     case CDefMPort(info, name, tpe, mem, exps, direction) =>
       firrtl2.CDefMPort(convert(info), name, convert(tpe), mem, exps.map(convert), convert(direction))
-    case other => throw new NotImplementedError(s"TODO: convert ${other}")
+    case IntrinsicStmt(info, "circt_chisel_ifelsefatal", args, params, tpe) =>
+      firrtl2.ir.Verification(
+        firrtl2.ir.Formal.Assert,
+        convert(info),
+        convert(args(0)),
+        convert(args(1)),
+        convert(args(2)),
+        firrtl2.ir.StringLit("")
+      )
+    case LayerBlock(info, layer: String, body: Statement) => convert(body)
+    case IntrinsicStmt(info, intrinsic, args, params, tpe) =>
+      throw new NotImplementedError(s"TODO: convert IntrinsicStmt ${intrinsic}")
+    case other =>
+      throw new NotImplementedError(s"TODO: convert ${other}")
+    // firrtl2.ir.EmptyStmt
   }
   private def convert(op: PrimOp): firrtl2.ir.PrimOp = op match {
     case PrimOps.Add          => firrtl2.PrimOps.Add

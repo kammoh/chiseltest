@@ -60,7 +60,10 @@ abstract class MemoryCompliance(sim: Simulator, tag: Tag = DefaultTag) extends C
   }
 
   it should "support initializing a memory from a file" taggedAs tag in {
-    val dut = load(readMem, Seq(MemoryFileInlineAnnotation(mRef, "src/test/resources/init.mem")))
+    val memResourcePath = "/init.mem"
+    val memFilePath = new java.io.File(memResourcePath.split("/").last)
+    firrtl.util.BackendCompilationUtilities.copyResourceToFile(memResourcePath, memFilePath)
+    val dut = load(readMem, Seq(MemoryFileInlineAnnotation(mRef, memFilePath.getCanonicalPath)))
     checkMem(dut, Seq(0xab, 0xcd, 0xef))
   }
 }

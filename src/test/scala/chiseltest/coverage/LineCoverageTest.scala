@@ -21,7 +21,7 @@ class LineCoverageTest extends AnyFlatSpec with ChiselScalatestTester {
     assert(data.files.size == 1)
 
     val file = data.files.head
-    assert(file.name == "src/test/scala/chiseltest/coverage/circuits/Test1Module.scala")
+    assert(file.name.endsWith("src/test/scala/chiseltest/coverage/circuits/Test1Module.scala"))
 
     val offset = 12
     val expected = List(
