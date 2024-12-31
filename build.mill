@@ -167,8 +167,6 @@ object firrtl2 extends AnyScalaModule with SbtModule with BuildInfo with CiRelea
 
 
 object chiseltest extends AnyScalaModule with SbtModule with BuildInfo with CiReleaseModule {
-  override def sonatypeHost = Some(SonatypeHost.s01)
-
   override def millSourcePath = super.millSourcePath / os.up
 
   override def scalacOptions = T {
@@ -201,6 +199,10 @@ object chiseltest extends AnyScalaModule with SbtModule with BuildInfo with CiRe
     override def ivyDeps = Agg(ivyDep("chisel"))
   }
 
+  override def moduleDeps = Seq(firrtl2)
+
+  override def artifactName = "chiseltest"
+
   override def buildInfoPackageName = "chiseltest"
 
   override def buildInfoMembers = Seq(
@@ -223,9 +225,8 @@ object chiseltest extends AnyScalaModule with SbtModule with BuildInfo with CiRe
     )
   }
 
-  override def moduleDeps = Seq(firrtl2)
-
-  override def artifactName = "chiseltest"
+  override def sonatypeUri = "https://oss.sonatype.org/service/local"
+  override def sonatypeSnapshotUri = "https://oss.sonatype.org/content/repositories/snapshots"
 }
 
 trait AnyScalaModule extends ScalaModule {
