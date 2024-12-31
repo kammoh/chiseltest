@@ -1,4 +1,5 @@
 name: Setup OSS CAD Suite
+description: Downloads OSS CAD Suite
 
 inputs:
   osscadsuite-version:

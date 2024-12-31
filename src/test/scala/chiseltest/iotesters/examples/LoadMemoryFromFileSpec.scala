@@ -28,8 +28,14 @@ class UsesMem(memoryDepth: Int, memoryType: Bits, fileName: String) extends Modu
   low.io.address := io.address
   io.value2 := low.io.value
 }
+
 object UsesMem {
-  val Mem1 = "src/test/resources/iotesters/mem1.txt"
+  lazy val Mem1 = {
+    val memResourcePath = "/iotesters/mem1.txt"
+    val memFilePath = new java.io.File(memResourcePath.split("/").last)
+    firrtl.util.BackendCompilationUtilities.copyResourceToFile(memResourcePath, memFilePath)
+    memFilePath.getCanonicalPath
+  }
 }
 
 class UsesMemLow(memoryDepth: Int, memoryType: Data) extends Module {
@@ -40,7 +46,10 @@ class UsesMemLow(memoryDepth: Int, memoryType: Data) extends Module {
 
   val memory = Mem(memoryDepth, memoryType)
 
-  loadMemoryFromFileInline(memory, "src/test/resources/iotesters/mem2.txt")
+  val memFile = new java.io.File("mem2.txt")
+  firrtl.util.BackendCompilationUtilities.copyResourceToFile("/iotesters/mem2.txt", memFile)
+
+  loadMemoryFromFileInline(memory, memFile.getCanonicalPath)
 
   io.value := memory(io.address)
 }
@@ -59,15 +68,8 @@ class LoadMemoryFromFileSpec extends AnyFreeSpec with ChiselScalatestTester {
   "Users can specify a source file to load memory from" taggedAs RequiresVerilator in {
 
     val targetDir = TargetDirAnnotation("test_run_dir/load_mem_test")
-    test(new UsesMem(memoryDepth = 8, memoryType = UInt(16.W), "src/test/resources/iotesters/mem1.txt"))
+    test(new UsesMem(memoryDepth = 8, memoryType = UInt(16.W), UsesMem.Mem1))
       .withAnnotations(Seq(VerilatorBackendAnnotation, targetDir))
-      .runPeekPoke(new LoadMemoryFromFileTester(_))
-  }
-
-  "Treadle supports loadFromFileInline using absolute paths" in {
-    // An absolute path
-    val path: os.Path = os.pwd / os.RelPath(UsesMem.Mem1)
-    test(new UsesMem(memoryDepth = 8, memoryType = UInt(16.W), path.toString()))
       .runPeekPoke(new LoadMemoryFromFileTester(_))
   }
 

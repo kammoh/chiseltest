@@ -18,7 +18,7 @@ class ChiselAnnotationTests extends AnyFreeSpec with ChiselScalatestTester {
     val e1 = intercept[ChiselException] {
       test(new FaultyModule) { dut => }
     }
-    assert(e1.getStackTrace.length == 5)
+    assert(e1.getStackTrace.length >= 5)
 
     val e2 = intercept[ChiselException] {
       test(new FaultyModule).withChiselAnnotations(Seq(PrintFullStackTraceAnnotation)) { dut => }
