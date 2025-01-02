@@ -257,7 +257,7 @@ trait AnyScalaModule extends ScalaModule {
     "scalacheck" -> ("org.scalatestplus::scalacheck-1-17", "3.2.17.0"),
     "scopt" -> ("com.github.scopt", "4.1.0"),
     "os-lib" -> ("com.lihaoyi", "0.11.3"),
-    "json4s-native" -> ("org.json4s", "4.1.0-M8+"),
+    "json4s-native" -> ("org.json4s", "4.1.0-M8"),
     "commons-text" -> ("org.apache.commons:", "1.13.0"),
     "scala-parallel-collections" -> ("org.scala-lang.modules", "1.1.0"),
     "jna" -> ("net.java.dev.jna:", "5.16.0")
