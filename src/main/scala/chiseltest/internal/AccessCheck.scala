@@ -83,6 +83,7 @@ private class AccessCheck(design: DesignInfo, topFileName: Option[String], teste
     val explanation =
       s"Trying to ${second.name} $signalName ${depend}which was ${first.name}ed by an unordered thread" +
         s" spawned at: $spawnLocation."
+    println(s"$kind: $explanation")
     throw ExceptionUtils.createThreadOrderDependentException(threadInfo, topFileName, s"$kind: $explanation")
   }
 

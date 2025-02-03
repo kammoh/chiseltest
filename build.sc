@@ -13,7 +13,7 @@ import mill.contrib.bloop.Bloop
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
 
-import $ivy.`io.chris-kipp::mill-ci-release::0.1.10`
+import $ivy.`io.chris-kipp::mill-ci-release::0.2.1`
 import io.kipp.mill.ci.release.CiReleaseModule
 import io.kipp.mill.ci.release.SonatypeHost
 
@@ -251,7 +251,7 @@ trait AnyScalaModule extends ScalaModule {
   }
 
   val defaultVersions = Map(
-    "chisel" -> ("org.chipsalliance", "7.0.0-M2+243-4aaefff4-SNAPSHOT"),
+    "chisel" -> ("org.chipsalliance", "7.0.0-M2+317-62ca9bdc-SNAPSHOT"),
     "chisel-plugin" -> ("org.chipsalliance:::", "$chisel"),
     "scalatest" -> ("org.scalatest", "3.2.19"),
     "scalacheck" -> ("org.scalatestplus::scalacheck-1-17", "3.2.17.0"),

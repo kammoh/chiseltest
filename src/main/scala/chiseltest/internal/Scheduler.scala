@@ -148,7 +148,7 @@ private class Scheduler(simulationStep: (Int, Int) => Int, startLocation: String
 
   /** order in which threads are scheduled */
   private val threadOrder = new ThreadOrder
-  private def threadsInSchedulerOrder = synchronized { threadOrder.getOrder.map(threads(_)) }
+  private def threadsInSchedulerOrder = threadOrder.getOrder.map(threads(_))
   override def isParentOf(id:          Int, childId: Int) = threadOrder.isParentOf(id, childId)
   override def getParent(id:           Int): Option[Int] = threadOrder.getParent(id)
   override def getForkLocation(id:     Int): String = threads(id).forkLocation
@@ -160,7 +160,7 @@ private class Scheduler(simulationStep: (Int, Int) => Int, startLocation: String
 
   override def getStepCount: Int = currentStep
 
-  @inline private def createThread(name: String, id: Int, runnable: () => Unit): (Thread, Semaphore) = synchronized {
+  @inline private def createThread(name: String, id: Int, runnable: () => Unit): (Thread, Semaphore) = {
     val semaphore = new Semaphore(0)
     val thread = new Thread(
       null,
@@ -217,7 +217,7 @@ private class Scheduler(simulationStep: (Int, Int) => Int, startLocation: String
   }
 
   /** Called by every thread right before it is done. */
-  private def finishThread(id: Int): Unit = synchronized {
+  private def finishThread(id: Int): Unit = {
     val info = threads(id)
     assert(
       info.status == ThreadActive || info.status == ThreadTerminating,
@@ -311,7 +311,7 @@ private class Scheduler(simulationStep: (Int, Int) => Int, startLocation: String
     onResumeThread(originalActiveThreadId)
   }
 
-  @inline private def wakeUpThread(nextThread: ThreadInfo): Unit = synchronized {
+  @inline private def wakeUpThread(nextThread: ThreadInfo): Unit = {
     // check thread (for debugging)
     val semaphoreNeedsToBeReleased = nextThread.status match {
       case ThreadActive => throw new RuntimeException(s"Cannot resume active thread! $nextThread")
@@ -343,7 +343,7 @@ private class Scheduler(simulationStep: (Int, Int) => Int, startLocation: String
   }
 
   /** Determines which thread needs to run next. */
-  @inline private def findNextThreadOption(): Option[ThreadInfo] = synchronized {
+  @inline private def findNextThreadOption(): Option[ThreadInfo] = {
     threadsInSchedulerOrder.find(t => canBeScheduled(t.status))
   }
 
@@ -362,12 +362,10 @@ private class Scheduler(simulationStep: (Int, Int) => Int, startLocation: String
   @inline private def threadsWaitingUntil: Iterable[Int] =
     threads.map(_.status).collect { case ThreadWaitingUntil(step) => step }
 
-  @inline private def threadsWithUnblockedJoin: Iterable[ThreadInfo] = this.synchronized {
-    threadsInSchedulerOrder.flatMap { t =>
-      t.status match {
-        case ThreadWaitingForJoin(otherThread) if threads(otherThread).status == ThreadFinished => Some(t)
-        case _                                                                                  => None
-      }
+  @inline private def threadsWithUnblockedJoin: Iterable[ThreadInfo] = threadsInSchedulerOrder.flatMap { t =>
+    t.status match {
+      case ThreadWaitingForJoin(otherThread) if threads(otherThread).status == ThreadFinished => Some(t)
+      case _                                                                                  => None
     }
   }
 
@@ -405,7 +403,7 @@ private class Scheduler(simulationStep: (Int, Int) => Int, startLocation: String
     * @return
     *   size of the step taken
     */
-  private def stepSimulationToNearestWait(): Int = synchronized {
+  private def stepSimulationToNearestWait(): Int = {
     // find all wait cycles
     val waitForSteps = threads.map(_.status).collect { case ThreadWaitingUntil(step) => step }
     // if no thread is waiting, then there is nothing to do
@@ -460,7 +458,6 @@ private class Scheduler(simulationStep: (Int, Int) => Int, startLocation: String
   private def terminateAllChildThreads(): Unit = threads.synchronized {
     // remember the info and all initial child threads
     val terminatingThread = threads(activeThreadId)
-
     var childThreads = threadOrder.getChildren(terminatingThread.id).toSet
 
     // check for an early exit
@@ -477,11 +474,13 @@ private class Scheduler(simulationStep: (Int, Int) => Int, startLocation: String
       val t = threadsInSchedulerOrder.find(t => childThreads(t.id)).get
 
       // change thread status
-      if (t.status.isInstanceOf[ThreadWaitingForJoin]) {
-        println(s"[ERROR] Cannot terminate thread waiting for join $t status ${t.status}")
+      // assert(!t.status.isInstanceOf[ThreadWaitingForJoin], s"Cannot terminate thread waiting for join $t")
+      t.status match {
+        case ThreadWaitingForJoin(otherThread) =>
+          println(s"Cannot terminate thread $t waiting for join on $otherThread")
+        case _ =>
+          t.status = ThreadTerminating
       }
-      assert(!t.status.isInstanceOf[ThreadWaitingForJoin], s"Cannot terminate thread waiting for join $t")
-      t.status = ThreadTerminating
 
       // schedule thread and wait for control to return
       terminatingThread.status = ThreadWaitingUntil(currentStep)
@@ -531,13 +530,16 @@ private class ThreadOrder {
   }
 
   /** Returns true iff `id` is a parent of `childId` */
-  @tailrec
-  final def isParentOf(id: Int, childId: Int): Boolean = {
-    val childNode = idToNode(childId)
-    if (childNode.parent == -1) { false }
-    else if (childNode.parent == id) { true }
-    else { isParentOf(id, childNode.parent) }
+  final def isParentOf(id: Int, childId: Int): Boolean = synchronized {
+    @tailrec def isParentOfRecursive(id: Int, childId: Int): Boolean = {
+      val childNode = idToNode(childId)
+      if (childNode.parent == -1) { false }
+      else if (childNode.parent == id) { true }
+      else { isParentOfRecursive(id, childNode.parent) }
+    }
+    isParentOfRecursive(id, childId)
   }
+
 
   /** Returns ids of all (transitive) child threads */
   def getChildren(thread: Int): Seq[Int] = synchronized {
@@ -597,7 +599,7 @@ private class ThreadOrder {
     node.thread = -1
   }
 
-  private def calculateOrder(): Seq[Int] = {
+  private def calculateOrder(): Seq[Int] = synchronized {
     assert(root.thread == 0, "We lost the main thread!")
     val order = mutable.ArrayBuffer[(Int, Int)]()
     val todo = mutable.Stack[Node]()
