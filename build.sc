@@ -13,7 +13,7 @@ import mill.contrib.bloop.Bloop
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
 
-import $ivy.`io.chris-kipp::mill-ci-release::0.2.1`
+import $ivy.`io.chris-kipp::mill-ci-release::0.3.0`
 import io.kipp.mill.ci.release.CiReleaseModule
 import io.kipp.mill.ci.release.SonatypeHost
 

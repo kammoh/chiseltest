@@ -121,6 +121,89 @@ package object chiseltest {
     }
   }
 
+  implicit class testableValidOfRecord[T <: Record](x: ValidIO[T]) extends ValidDriver(x) {
+    def expectDequeuePartial(data: T): Unit = {
+      fork
+        .withRegion(Monitor) {
+          while (!x.valid.peekBoolean()) {
+            step(1)
+          }
+          x.valid.expect(true.B, "should never happen")
+          x.bits.expectPartial(data)
+        }
+        .joinAndStep()
+    }
+
+    def expectDequeueSeqPartial(data: Seq[T]): Unit = {
+      for (elt <- data) {
+        expectDequeuePartial(elt)
+      }
+    }
+
+    def enqueuePartial(data: T): Unit = {
+      x.bits.pokePartial(data)
+      x.valid.poke(true.B)
+      step(1)
+      x.valid.poke(false.B)
+    }
+
+    def enqueueSeqPartial(data: Seq[T]): Unit = {
+      for (elt <- data) {
+        enqueuePartial(elt)
+      }
+    }
+  }
+
+  implicit class testableDecoupledOfRecord[T <: Record](x: ReadyValidIO[T]) extends DecoupledDriver(x) {
+    def expectDequeuePartial(data: T): Unit = {
+      x.ready.poke(true)
+      fork
+        .withRegion(Monitor) {
+          waitForValid()
+          x.valid.expect(true.B)
+          x.bits.expectPartial(data)
+        }
+        .joinAndStep()
+      x.ready.poke(false)
+    }
+
+    def expectDequeueSeqPartial(data: Seq[T]): Unit = {
+      for (elt <- data) {
+        expectDequeuePartial(elt)
+      }
+    }
+
+    def enqueueNowPartial(data: T): Unit = {
+      x.bits.poke(data)
+      x.valid.poke(true)
+      fork
+        .withRegion(Monitor) {
+          x.ready.expect(true.B)
+        }
+        .joinAndStep()
+      x.valid.poke(false)
+    }
+
+    def enqueuePartial(data: T): Unit = {
+      x.bits.pokePartial(data)
+      x.valid.poke(true)
+      fork
+        .withRegion(Monitor) {
+          while (!x.ready.peekBoolean()) {
+            step(1)
+          }
+        }
+        .joinAndStep()
+      x.valid.poke(false)
+    }
+
+    def enqueueSeqPartial(data: Seq[T]): Unit = {
+      for (elt <- data) {
+        enqueuePartial(elt)
+      }
+    }
+  }
+
   implicit class testableRecord[T <: Record](x: T) {
 
     /** Poke the given signal with a [[Record.litValue()]] Literals of this Record can be instantiated with
